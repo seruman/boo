@@ -1,0 +1,1 @@
+tell application id "{{.BundleID}}" to send mouse button {{.Button}}{{if .Action}} action {{.Action}}{{end}}{{if .Modifiers}} modifiers "{{escape .Modifiers}}"{{end}} to terminal id "{{escape .TerminalID}}"
