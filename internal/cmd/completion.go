@@ -24,7 +24,11 @@ func completeWindowIDs(cmd *cobra.Command, args []string, toComplete string) ([]
 func completeTabIDs(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	windowID, _ := cmd.Flags().GetString("window")
 	if windowID == "" {
-		return nil, cobra.ShellCompDirectiveNoFileComp
+		frontWindow, err := ghostty.FrontWindow()
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		windowID = frontWindow.ID
 	}
 
 	tabs, err := ghostty.ListTabs(windowID)

@@ -39,15 +39,15 @@ func newTerminalListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List terminals",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if tabID != "" && windowID == "" {
-				return fmt.Errorf("--tab requires --window")
-			}
-
 			var terminals []ghostty.Terminal
 			var err error
 			switch {
-			case windowID != "" && tabID != "":
-				terminals, err = ghostty.ListTerminalsOfTab(windowID, tabID)
+			case tabID != "":
+				resolvedWindowID, resolveErr := resolveWindowID(windowID)
+				if resolveErr != nil {
+					return resolveErr
+				}
+				terminals, err = ghostty.ListTerminalsOfTab(resolvedWindowID, tabID)
 			case windowID != "":
 				terminals, err = ghostty.ListTerminalsOfWindow(windowID)
 			default:
@@ -65,7 +65,7 @@ func newTerminalListCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&windowID, "window", "w", "", "scope to window ID")
 	cmd.RegisterFlagCompletionFunc("window", completeWindowIDs)
-	cmd.Flags().StringVarP(&tabID, "tab", "t", "", "scope to tab ID (requires --window)")
+	cmd.Flags().StringVarP(&tabID, "tab", "t", "", "scope to tab ID (uses front window if --window is omitted)")
 	cmd.RegisterFlagCompletionFunc("tab", completeTabIDs)
 	return cmd
 }
@@ -77,7 +77,12 @@ func newTerminalGetCmd() *cobra.Command {
 		Use:   "get",
 		Short: "Get a terminal",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			t, err := ghostty.GetTerminal(id)
+			resolvedID, err := resolveTerminalID(id)
+			if err != nil {
+				return err
+			}
+
+			t, err := ghostty.GetTerminal(resolvedID)
 			if err != nil {
 				return err
 			}
@@ -87,8 +92,7 @@ func newTerminalGetCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&id, "id", "", "terminal ID")
-	cmd.MarkFlagRequired("id")
+	cmd.Flags().StringVar(&id, "id", "", "terminal ID (defaults to focused terminal)")
 	cmd.RegisterFlagCompletionFunc("id", completeTerminalIDs)
 	return cmd
 }
@@ -149,7 +153,12 @@ func newTerminalSplitCmd() *cobra.Command {
 		Use:   "split",
 		Short: "Split a terminal",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			newID, err := ghostty.SplitTerminal(id, direction, cfg)
+			resolvedID, err := resolveTerminalID(id)
+			if err != nil {
+				return err
+			}
+
+			newID, err := ghostty.SplitTerminal(resolvedID, direction, cfg)
 			if err != nil {
 				return err
 			}
@@ -159,8 +168,7 @@ func newTerminalSplitCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&id, "id", "", "terminal ID")
-	cmd.MarkFlagRequired("id")
+	cmd.Flags().StringVar(&id, "id", "", "terminal ID (defaults to focused terminal)")
 	cmd.RegisterFlagCompletionFunc("id", completeTerminalIDs)
 	cmd.Flags().StringVarP(&direction, "direction", "d", "right", "split direction: right, left, down, up")
 	addSurfaceConfigFlags(cmd, &cfg)
@@ -174,12 +182,16 @@ func newTerminalFocusCmd() *cobra.Command {
 		Use:   "focus",
 		Short: "Focus a terminal",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return ghostty.FocusTerminal(id)
+			resolvedID, err := resolveTerminalID(id)
+			if err != nil {
+				return err
+			}
+
+			return ghostty.FocusTerminal(resolvedID)
 		},
 	}
 
-	cmd.Flags().StringVar(&id, "id", "", "terminal ID")
-	cmd.MarkFlagRequired("id")
+	cmd.Flags().StringVar(&id, "id", "", "terminal ID (defaults to focused terminal)")
 	cmd.RegisterFlagCompletionFunc("id", completeTerminalIDs)
 	return cmd
 }
@@ -191,12 +203,16 @@ func newTerminalCloseCmd() *cobra.Command {
 		Use:   "close",
 		Short: "Close a terminal",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return ghostty.CloseTerminal(id)
+			resolvedID, err := resolveTerminalID(id)
+			if err != nil {
+				return err
+			}
+
+			return ghostty.CloseTerminal(resolvedID)
 		},
 	}
 
-	cmd.Flags().StringVar(&id, "id", "", "terminal ID")
-	cmd.MarkFlagRequired("id")
+	cmd.Flags().StringVar(&id, "id", "", "terminal ID (defaults to focused terminal)")
 	cmd.RegisterFlagCompletionFunc("id", completeTerminalIDs)
 	return cmd
 }
@@ -209,7 +225,12 @@ func newTerminalActionCmd() *cobra.Command {
 		Short: "Perform a keybind action",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ok, err := ghostty.PerformAction(args[0], id)
+			resolvedID, err := resolveTerminalID(id)
+			if err != nil {
+				return err
+			}
+
+			ok, err := ghostty.PerformAction(args[0], resolvedID)
 			if err != nil {
 				return err
 			}
@@ -219,8 +240,7 @@ func newTerminalActionCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&id, "id", "", "terminal ID")
-	cmd.MarkFlagRequired("id")
+	cmd.Flags().StringVar(&id, "id", "", "terminal ID (defaults to focused terminal)")
 	cmd.RegisterFlagCompletionFunc("id", completeTerminalIDs)
 	return cmd
 }
@@ -233,12 +253,16 @@ func newTerminalInputCmd() *cobra.Command {
 		Short: "Paste text to a terminal",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return ghostty.InputText(args[0], id)
+			resolvedID, err := resolveTerminalID(id)
+			if err != nil {
+				return err
+			}
+
+			return ghostty.InputText(args[0], resolvedID)
 		},
 	}
 
-	cmd.Flags().StringVar(&id, "id", "", "terminal ID")
-	cmd.MarkFlagRequired("id")
+	cmd.Flags().StringVar(&id, "id", "", "terminal ID (defaults to focused terminal)")
 	cmd.RegisterFlagCompletionFunc("id", completeTerminalIDs)
 	return cmd
 }
@@ -251,12 +275,16 @@ func newTerminalSendKeyCmd() *cobra.Command {
 		Short: "Send a key event",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return ghostty.SendKey(args[0], id, action, modifiers)
+			resolvedID, err := resolveTerminalID(id)
+			if err != nil {
+				return err
+			}
+
+			return ghostty.SendKey(args[0], resolvedID, action, modifiers)
 		},
 	}
 
-	cmd.Flags().StringVar(&id, "id", "", "terminal ID")
-	cmd.MarkFlagRequired("id")
+	cmd.Flags().StringVar(&id, "id", "", "terminal ID (defaults to focused terminal)")
 	cmd.RegisterFlagCompletionFunc("id", completeTerminalIDs)
 	cmd.Flags().StringVarP(&action, "action", "a", "", "press or release (default: press)")
 	cmd.Flags().StringVarP(&modifiers, "modifiers", "m", "", "comma-separated modifiers: shift,control,option,command")
@@ -270,12 +298,16 @@ func newTerminalSendMouseButtonCmd() *cobra.Command {
 		Use:   "send-mouse-button",
 		Short: "Send a mouse button event",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return ghostty.SendMouseButton(button, id, action, modifiers)
+			resolvedID, err := resolveTerminalID(id)
+			if err != nil {
+				return err
+			}
+
+			return ghostty.SendMouseButton(button, resolvedID, action, modifiers)
 		},
 	}
 
-	cmd.Flags().StringVar(&id, "id", "", "terminal ID")
-	cmd.MarkFlagRequired("id")
+	cmd.Flags().StringVar(&id, "id", "", "terminal ID (defaults to focused terminal)")
 	cmd.RegisterFlagCompletionFunc("id", completeTerminalIDs)
 	cmd.Flags().StringVarP(&button, "button", "b", "left button", "mouse button: left button, right button, middle button")
 	cmd.Flags().StringVarP(&action, "action", "a", "", "press or release (default: press)")
@@ -291,12 +323,16 @@ func newTerminalSendMousePosCmd() *cobra.Command {
 		Use:   "send-mouse-pos",
 		Short: "Send a mouse position event",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return ghostty.SendMousePosition(x, y, id, modifiers)
+			resolvedID, err := resolveTerminalID(id)
+			if err != nil {
+				return err
+			}
+
+			return ghostty.SendMousePosition(x, y, resolvedID, modifiers)
 		},
 	}
 
-	cmd.Flags().StringVar(&id, "id", "", "terminal ID")
-	cmd.MarkFlagRequired("id")
+	cmd.Flags().StringVar(&id, "id", "", "terminal ID (defaults to focused terminal)")
 	cmd.RegisterFlagCompletionFunc("id", completeTerminalIDs)
 	cmd.Flags().Float64Var(&x, "x", 0, "horizontal position in pixels")
 	cmd.MarkFlagRequired("x")
@@ -315,12 +351,16 @@ func newTerminalSendMouseScrollCmd() *cobra.Command {
 		Use:   "send-mouse-scroll",
 		Short: "Send a mouse scroll event",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return ghostty.SendMouseScroll(x, y, id, precision, momentum)
+			resolvedID, err := resolveTerminalID(id)
+			if err != nil {
+				return err
+			}
+
+			return ghostty.SendMouseScroll(x, y, resolvedID, precision, momentum)
 		},
 	}
 
-	cmd.Flags().StringVar(&id, "id", "", "terminal ID")
-	cmd.MarkFlagRequired("id")
+	cmd.Flags().StringVar(&id, "id", "", "terminal ID (defaults to focused terminal)")
 	cmd.RegisterFlagCompletionFunc("id", completeTerminalIDs)
 	cmd.Flags().Float64Var(&x, "dx", 0, "horizontal scroll delta")
 	cmd.Flags().Float64Var(&y, "dy", 0, "vertical scroll delta")

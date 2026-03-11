@@ -84,12 +84,16 @@ func newWindowActivateCmd() *cobra.Command {
 		Use:   "activate",
 		Short: "Activate a window",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return ghostty.ActivateWindow(id)
+			resolvedID, err := resolveWindowID(id)
+			if err != nil {
+				return err
+			}
+
+			return ghostty.ActivateWindow(resolvedID)
 		},
 	}
 
-	cmd.Flags().StringVar(&id, "id", "", "window ID")
-	cmd.MarkFlagRequired("id")
+	cmd.Flags().StringVar(&id, "id", "", "window ID (defaults to front window)")
 	cmd.RegisterFlagCompletionFunc("id", completeWindowIDs)
 	return cmd
 }
@@ -101,12 +105,16 @@ func newWindowCloseCmd() *cobra.Command {
 		Use:   "close",
 		Short: "Close a window",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return ghostty.CloseWindow(id)
+			resolvedID, err := resolveWindowID(id)
+			if err != nil {
+				return err
+			}
+
+			return ghostty.CloseWindow(resolvedID)
 		},
 	}
 
-	cmd.Flags().StringVar(&id, "id", "", "window ID")
-	cmd.MarkFlagRequired("id")
+	cmd.Flags().StringVar(&id, "id", "", "window ID (defaults to front window)")
 	cmd.RegisterFlagCompletionFunc("id", completeWindowIDs)
 	return cmd
 }

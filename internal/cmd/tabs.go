@@ -30,7 +30,12 @@ func newTabListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List tabs in a window",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			tabs, err := ghostty.ListTabs(windowID)
+			resolvedWindowID, err := resolveWindowID(windowID)
+			if err != nil {
+				return err
+			}
+
+			tabs, err := ghostty.ListTabs(resolvedWindowID)
 			if err != nil {
 				return err
 			}
@@ -40,8 +45,7 @@ func newTabListCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&windowID, "window", "w", "", "window ID")
-	cmd.MarkFlagRequired("window")
+	cmd.Flags().StringVarP(&windowID, "window", "w", "", "window ID (defaults to front window)")
 	cmd.RegisterFlagCompletionFunc("window", completeWindowIDs)
 	return cmd
 }
@@ -77,12 +81,20 @@ func newTabSelectCmd() *cobra.Command {
 		Use:   "select",
 		Short: "Select a tab",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return ghostty.SelectTab(windowID, id)
+			resolvedWindowID, err := resolveWindowID(windowID)
+			if err != nil {
+				return err
+			}
+
+			if id == "" {
+				return fmt.Errorf("tab ID is required")
+			}
+
+			return ghostty.SelectTab(resolvedWindowID, id)
 		},
 	}
 
-	cmd.Flags().StringVarP(&windowID, "window", "w", "", "window ID")
-	cmd.MarkFlagRequired("window")
+	cmd.Flags().StringVarP(&windowID, "window", "w", "", "window ID (defaults to front window)")
 	cmd.RegisterFlagCompletionFunc("window", completeWindowIDs)
 	cmd.Flags().StringVar(&id, "id", "", "tab ID")
 	cmd.MarkFlagRequired("id")
@@ -97,15 +109,18 @@ func newTabCloseCmd() *cobra.Command {
 		Use:   "close",
 		Short: "Close a tab",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return ghostty.CloseTab(windowID, id)
+			resolvedWindowID, resolvedTabID, err := resolveTabID(windowID, id)
+			if err != nil {
+				return err
+			}
+
+			return ghostty.CloseTab(resolvedWindowID, resolvedTabID)
 		},
 	}
 
-	cmd.Flags().StringVarP(&windowID, "window", "w", "", "window ID")
-	cmd.MarkFlagRequired("window")
+	cmd.Flags().StringVarP(&windowID, "window", "w", "", "window ID (defaults to front window)")
 	cmd.RegisterFlagCompletionFunc("window", completeWindowIDs)
-	cmd.Flags().StringVar(&id, "id", "", "tab ID")
-	cmd.MarkFlagRequired("id")
+	cmd.Flags().StringVar(&id, "id", "", "tab ID (defaults to selected tab in window)")
 	cmd.RegisterFlagCompletionFunc("id", completeTabIDs)
 	return cmd
 }
