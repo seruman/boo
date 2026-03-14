@@ -24,6 +24,23 @@ func ListTabs(windowID string) ([]Tab, error) {
 	return tabs, nil
 }
 
+func FocusedTerminalOfTab(windowID, tabID string) (Terminal, error) {
+	desc, err := execTemplate("tab_focused_terminal.applescript", struct {
+		baseData
+		WindowID string
+		TabID    string
+	}{baseParams(), windowID, tabID})
+	if err != nil {
+		return Terminal{}, err
+	}
+
+	return Terminal{
+		ID:               desc.DescriptorAtIndex(1).StringValue(),
+		Name:             desc.DescriptorAtIndex(2).StringValue(),
+		WorkingDirectory: desc.DescriptorAtIndex(3).StringValue(),
+	}, nil
+}
+
 func NewTab(windowID string, cfg SurfaceConfig) (string, error) {
 	type params struct {
 		surfaceConfigData

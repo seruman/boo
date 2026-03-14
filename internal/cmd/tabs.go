@@ -15,6 +15,7 @@ func newTabCmd() *cobra.Command {
 
 	cmd.AddCommand(
 		newTabListCmd(),
+		newTabFocusedTerminalCmd(),
 		newTabNewCmd(),
 		newTabSelectCmd(),
 		newTabCloseCmd(),
@@ -47,6 +48,35 @@ func newTabListCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&windowID, "window", "w", "", "window ID (defaults to front window)")
 	cmd.RegisterFlagCompletionFunc("window", completeWindowIDs)
+	return cmd
+}
+
+func newTabFocusedTerminalCmd() *cobra.Command {
+	var windowID, id string
+
+	cmd := &cobra.Command{
+		Use:   "focused-terminal",
+		Short: "Get the focused terminal of a tab",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			resolvedWindowID, resolvedTabID, err := resolveTabID(windowID, id)
+			if err != nil {
+				return err
+			}
+
+			terminal, err := ghostty.FocusedTerminalOfTab(resolvedWindowID, resolvedTabID)
+			if err != nil {
+				return err
+			}
+
+			printTerminal(terminal)
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVarP(&windowID, "window", "w", "", "window ID (defaults to front window)")
+	cmd.RegisterFlagCompletionFunc("window", completeWindowIDs)
+	cmd.Flags().StringVar(&id, "id", "", "tab ID (defaults to selected tab in window)")
+	cmd.RegisterFlagCompletionFunc("id", completeTabIDs)
 	return cmd
 }
 
