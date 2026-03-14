@@ -33,16 +33,16 @@ Flags:
 ```
 
 ```
-boo tree                          # show window/tab/terminal hierarchy
-boo window list                   # list windows
-boo window front                  # get frontmost window
+boo tree                           # show window/tab/terminal hierarchy
+boo window list                    # list windows
+boo window front                   # get frontmost window
 boo tab list --window <id>         # list tabs in a window
 boo tab focused-terminal           # focused terminal of selected tab in front window
 boo tab focused-terminal --id <id> # focused terminal of a specific tab
 boo tab set-title "prod"           # set title of selected tab in front window
 boo terminal list                  # list all terminals
 boo terminal set-title "logs"      # set title of focused terminal
-boo terminal find --cwd ghostty   # find terminals by working directory
+boo terminal find --cwd ghostty    # find terminals by working directory
 boo terminal find --name nvim      # find terminals by name
 boo version                        # ghostty version
 ```
