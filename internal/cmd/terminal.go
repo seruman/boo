@@ -16,7 +16,7 @@ func newTerminalCmd() *cobra.Command {
 	cmd.AddCommand(
 		newTerminalListCmd(),
 		newTerminalGetCmd(),
-		newTerminalFocusedCmd(),
+		newTerminalSetTitleCmd(),
 		newTerminalFindCmd(),
 		newTerminalSplitCmd(),
 		newTerminalFocusCmd(),
@@ -97,20 +97,31 @@ func newTerminalGetCmd() *cobra.Command {
 	return cmd
 }
 
-func newTerminalFocusedCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "focused",
-		Short: "Get focused terminal",
+func newTerminalSetTitleCmd() *cobra.Command {
+	var id string
+
+	cmd := &cobra.Command{
+		Use:   "set-title [title]",
+		Short: "Set or clear a terminal title",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			t, err := ghostty.FocusedTerminal()
+			resolvedID, err := resolveTerminalID(id)
 			if err != nil {
 				return err
 			}
 
-			printTerminal(t)
-			return nil
+			title := ""
+			if len(args) > 0 {
+				title = args[0]
+			}
+
+			return ghostty.SetTerminalTitle(title, resolvedID)
 		},
 	}
+
+	cmd.Flags().StringVar(&id, "id", "", "terminal ID (defaults to focused terminal)")
+	cmd.RegisterFlagCompletionFunc("id", completeTerminalIDs)
+	return cmd
 }
 
 func newTerminalFindCmd() *cobra.Command {

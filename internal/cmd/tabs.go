@@ -16,6 +16,7 @@ func newTabCmd() *cobra.Command {
 	cmd.AddCommand(
 		newTabListCmd(),
 		newTabFocusedTerminalCmd(),
+		newTabSetTitleCmd(),
 		newTabNewCmd(),
 		newTabSelectCmd(),
 		newTabCloseCmd(),
@@ -70,6 +71,40 @@ func newTabFocusedTerminalCmd() *cobra.Command {
 
 			printTerminal(terminal)
 			return nil
+		},
+	}
+
+	cmd.Flags().StringVarP(&windowID, "window", "w", "", "window ID (defaults to front window)")
+	cmd.RegisterFlagCompletionFunc("window", completeWindowIDs)
+	cmd.Flags().StringVar(&id, "id", "", "tab ID (defaults to selected tab in window)")
+	cmd.RegisterFlagCompletionFunc("id", completeTabIDs)
+	return cmd
+}
+
+func newTabSetTitleCmd() *cobra.Command {
+	var windowID, id string
+
+	cmd := &cobra.Command{
+		Use:   "set-title [title]",
+		Short: "Set or clear a tab title",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			resolvedWindowID, resolvedTabID, err := resolveTabID(windowID, id)
+			if err != nil {
+				return err
+			}
+
+			terminal, err := ghostty.FocusedTerminalOfTab(resolvedWindowID, resolvedTabID)
+			if err != nil {
+				return err
+			}
+
+			title := ""
+			if len(args) > 0 {
+				title = args[0]
+			}
+
+			return ghostty.SetTabTitle(title, terminal.ID)
 		},
 	}
 
